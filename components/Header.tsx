@@ -7,9 +7,11 @@ import { CONTENT, LANGUAGES } from '../constants';
 interface HeaderProps {
   currentLang: Language;
   setLang: (lang: Language) => void;
+  isAdmin?: boolean;
+  onLogout?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ currentLang, setLang }) => {
+const Header: React.FC<HeaderProps> = ({ currentLang, setLang, isAdmin, onLogout }) => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -85,6 +87,18 @@ const Header: React.FC<HeaderProps> = ({ currentLang, setLang }) => {
               </button>
             ))}
           </div>
+          {isAdmin && (
+            <div className="flex items-center space-x-3 border-l border-white/10 pl-3">
+              <span className="text-[8px] font-black text-orange-500 uppercase tracking-widest hidden md:block">Admin</span>
+              <button
+                onClick={onLogout}
+                className="w-7 h-7 rounded-full bg-red-600/20 border border-red-600/40 flex items-center justify-center text-red-500 hover:bg-red-600 hover:text-white transition-all shadow-lg text-[10px]"
+                title="Logout"
+              >
+                <i className="fas fa-sign-out-alt"></i>
+              </button>
+            </div>
+          )}
           <button onClick={() => setIsOpen(!isOpen)} className="xl:hidden text-white p-2 active:scale-90 transition-transform">
             <i className={`fas ${isOpen ? 'fa-times' : 'fa-bars-staggered'} text-xl`}></i>
           </button>

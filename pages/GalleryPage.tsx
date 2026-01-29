@@ -6,13 +6,26 @@ import { useLocation } from 'react-router-dom';
 interface GalleryPageProps {
   lang: Language;
   images: GalleryImage[];
+  isAdmin?: boolean;
+  onAdd?: (img: Omit<GalleryImage, 'id'>) => void;
+  onDelete?: (id: string) => void;
 }
 
-const GalleryPage: React.FC<GalleryPageProps> = ({ images }) => {
+const GalleryPage: React.FC<GalleryPageProps> = ({ images, isAdmin, onAdd, onDelete }) => {
   const location = useLocation();
-  // Uvijek default na ALL
   const [activeFilter, setActiveFilter] = useState('ALL');
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newImg, setNewImg] = useState({ title: '', url: '', year: '2025', category: 'Training' });
+
+  const handleAdd = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (onAdd && newImg.url && newImg.title) {
+      onAdd(newImg);
+      setNewImg({ title: '', url: '', year: '2025', category: 'Training' });
+      setShowAddForm(false);
+    }
+  };
 
   // Korisnik i dalje može filtrirati ako klikne sa Home strane, ali prompt kaže "nemoj odma da applayas filter"
   // Pa ćemo samo ostaviti opciju u filterima istaknutu ali prikazati ALL ili dozvoliti ALL default.
@@ -40,6 +53,42 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ images }) => {
           <p className="text-zinc-500 max-w-2xl mx-auto text-lg uppercase tracking-widest text-xs font-bold">Kroz objektiv šampiona.</p>
         </div>
 
+        {/* Admin Add Section */}
+        {isAdmin && (
+          <div className="mb-12 flex justify-center">
+            {!showAddForm ? (
+              <button
+                onClick={() => setShowAddForm(true)}
+                className="group px-8 py-4 bg-orange-600 rounded-xl text-white font-black uppercase tracking-widest text-xs flex items-center shadow-2xl border border-white/20 active:scale-95 transition-all"
+              >
+                <i className="fas fa-plus-circle mr-3 text-lg group-hover:rotate-90 transition-transform"></i>
+                Dodaj novu sliku
+              </button>
+            ) : (
+              <form onSubmit={handleAdd} className="w-full max-w-4xl bg-zinc-900 p-6 rounded-2xl border-2 border-orange-500/30 grid grid-cols-1 md:grid-cols-4 gap-4 items-end animate-in fade-in zoom-in duration-300">
+                <div className="md:col-span-2">
+                  <label className="text-[10px] font-black text-zinc-500 uppercase mb-1 block">URL Slike</label>
+                  <input required value={newImg.url} onChange={e => setNewImg({ ...newImg, url: e.target.value })} className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-xs outline-none focus:border-orange-500" placeholder="https://..." />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-zinc-500 uppercase mb-1 block">Naslov</label>
+                  <input required value={newImg.title} onChange={e => setNewImg({ ...newImg, title: e.target.value })} className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-xs outline-none focus:border-orange-500" placeholder="npr. Kamp 2024" />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-zinc-500 uppercase mb-1 block">Godina</label>
+                  <select value={newImg.year} onChange={e => setNewImg({ ...newImg, year: e.target.value })} className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-xs outline-none focus:border-orange-500">
+                    {['2025', '2024', '2023', '2022', '2021', '2020'].map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </div>
+                <div className="md:col-span-4 flex justify-end gap-2 mt-2">
+                  <button type="button" onClick={() => setShowAddForm(false)} className="px-6 py-2 bg-zinc-800 text-white font-bold rounded-lg uppercase text-[10px]">Poništi</button>
+                  <button type="submit" className="px-6 py-2 bg-orange-600 text-white font-black rounded-lg uppercase text-[10px]">Sačuvaj</button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
+
         {/* Filters */}
         <div className="flex flex-wrap justify-center gap-2 mb-16 reveal" style={{ transitionDelay: '0.2s' }}>
           {filters.map(f => (
@@ -47,8 +96,8 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ images }) => {
               key={f as string}
               onClick={() => setActiveFilter(f as string)}
               className={`px-6 py-2 rounded font-black uppercase tracking-widest transition-all text-[10px] border-2 ${activeFilter === f
-                  ? 'bg-orange-600 border-orange-500 text-white shadow-xl'
-                  : 'border-white/20 text-zinc-500 hover:border-zinc-400'
+                ? 'bg-orange-600 border-orange-500 text-white shadow-xl'
+                : 'border-white/20 text-zinc-500 hover:border-zinc-400'
                 }`}
             >
               {f as string}
@@ -73,6 +122,14 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ images }) => {
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
                 <p className="text-orange-500 font-black uppercase tracking-widest text-[8px] mb-1">{img.year}</p>
                 <h3 className="text-white font-oswald font-black text-sm uppercase leading-tight truncate">{img.title}</h3>
+                {isAdmin && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); if (confirm('Obrisati sliku?')) onDelete?.(img.id); }}
+                    className="absolute top-2 right-2 w-8 h-8 bg-red-600 rounded flex items-center justify-center text-white text-[10px] hover:bg-red-500 transition-colors shadow-xl"
+                  >
+                    <i className="fas fa-trash"></i>
+                  </button>
+                )}
               </div>
             </div>
           ))}

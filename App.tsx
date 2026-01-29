@@ -17,24 +17,30 @@ const DEFAULT_HOME_SETTINGS: HomeSettings = {
   logoUrl: '/logo.png'
 };
 
+import LoginPage from './pages/LoginPage';
+
 const App: React.FC = () => {
   const [lang, setLang] = useState<Language>('BA');
+  const [isAdmin, setIsAdmin] = useState(() => {
+    return localStorage.getItem('tbc_is_admin') === 'true';
+  });
+
   const [images, setImages] = useState<GalleryImage[]>(() => {
-    const saved = localStorage.getItem('tbc_gallery_v2');
+    const saved = localStorage.getItem('tbc_gallery_v3');
     return saved ? JSON.parse(saved) : INITIAL_GALLERY;
   });
 
   const [homeSettings, setHomeSettings] = useState<HomeSettings>(() => {
-    const saved = localStorage.getItem('tbc_home_settings_v2');
+    const saved = localStorage.getItem('tbc_home_settings_v3');
     return saved ? JSON.parse(saved) : DEFAULT_HOME_SETTINGS;
   });
 
   useEffect(() => {
-    localStorage.setItem('tbc_gallery_v2', JSON.stringify(images));
+    localStorage.setItem('tbc_gallery_v3', JSON.stringify(images));
   }, [images]);
 
   useEffect(() => {
-    localStorage.setItem('tbc_home_settings_v2', JSON.stringify(homeSettings));
+    localStorage.setItem('tbc_home_settings_v3', JSON.stringify(homeSettings));
   }, [homeSettings]);
 
   const addImage = (img: Omit<GalleryImage, 'id'>) => {
@@ -50,16 +56,21 @@ const App: React.FC = () => {
     setHomeSettings(newSettings);
   };
 
+  const handleLogout = () => {
+    setIsAdmin(false);
+    localStorage.removeItem('tbc_is_admin');
+  };
+
   return (
     <Router>
       <div className="flex flex-col min-h-screen">
-        <Header currentLang={lang} setLang={setLang} />
+        <Header currentLang={lang} setLang={setLang} isAdmin={isAdmin} onLogout={handleLogout} />
 
         <main className="flex-grow">
           <Routes>
-            <Route path="/" element={<Home lang={lang} images={images} settings={homeSettings} />} />
-            <Route path="/gallery" element={<GalleryPage lang={lang} images={images} />} />
-            <Route path="/admin-secret-access" element={<AdminPage images={images} onAdd={addImage} onDelete={deleteImage} settings={homeSettings} onUpdateSettings={updateHomeSettings} />} />
+            <Route path="/" element={<Home lang={lang} images={images} settings={homeSettings} isAdmin={isAdmin} onUpdateSettings={updateHomeSettings} />} />
+            <Route path="/gallery" element={<GalleryPage lang={lang} images={images} isAdmin={isAdmin} onAdd={addImage} onDelete={deleteImage} />} />
+            <Route path="/admin" element={<LoginPage onLogin={() => setIsAdmin(true)} />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </main>

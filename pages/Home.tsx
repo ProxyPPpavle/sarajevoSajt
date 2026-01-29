@@ -10,13 +10,27 @@ interface HomeProps {
   lang: Language;
   images: GalleryImage[];
   settings: HomeSettings;
+  isAdmin?: boolean;
+  onUpdateSettings?: (settings: HomeSettings) => void;
 }
 
-const Home: React.FC<HomeProps> = ({ lang, images, settings }) => {
+const Home: React.FC<HomeProps> = ({ lang, images, settings, isAdmin, onUpdateSettings }) => {
   const c = CONTENT[lang];
   const navigate = useNavigate();
   const [historyPage, setHistoryPage] = useState(0);
   const [isChangingPage, setIsChangingPage] = useState(false);
+  const [editingImage, setEditingImage] = useState<{ field: keyof HomeSettings, url: string } | null>(null);
+
+  const handleEditClick = (field: keyof HomeSettings, currentUrl: string) => {
+    setEditingImage({ field, url: currentUrl });
+  };
+
+  const handleSaveEdit = () => {
+    if (editingImage && onUpdateSettings) {
+      onUpdateSettings({ ...settings, [editingImage.field]: editingImage.url });
+      setEditingImage(null);
+    }
+  };
 
   const allYears = Array.from(new Set(images.map(img => img.year)))
     .filter(year => year !== 'ALL' && !isNaN(parseInt(year as string)))
@@ -71,6 +85,14 @@ const Home: React.FC<HomeProps> = ({ lang, images, settings }) => {
           />
           <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-transparent opacity-80 lg:opacity-100"></div>
           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+          {isAdmin && (
+            <button
+              onClick={() => handleEditClick('heroImage', settings.heroImage)}
+              className="absolute top-24 right-8 z-30 w-12 h-12 bg-orange-600 rounded-full flex items-center justify-center text-white shadow-2xl border border-white/20 hover:scale-110 transition-transform"
+            >
+              <i className="fas fa-camera text-xl"></i>
+            </button>
+          )}
         </div>
 
         <div className="container mx-auto px-4 relative z-10 h-full flex flex-col justify-center">
@@ -222,9 +244,17 @@ const Home: React.FC<HomeProps> = ({ lang, images, settings }) => {
                 POŠALJI UPIT
               </button>
             </div>
-            <div className="reveal order-1 lg:order-2" style={{ transitionDelay: '0.2s' }}>
+            <div className="reveal order-1 lg:order-2 relative group" style={{ transitionDelay: '0.2s' }}>
               <div className="aspect-[4/3] sm:aspect-square max-w-full lg:max-w-lg mx-auto bg-zinc-900 rounded-lg overflow-hidden shadow-2xl border border-white/20 p-1">
                 <img src={settings.scholarshipImage} className="w-full h-full object-cover" alt="USA Scholarship" />
+                {isAdmin && (
+                  <button
+                    onClick={() => handleEditClick('scholarshipImage', settings.scholarshipImage)}
+                    className="absolute top-4 right-4 z-10 w-10 h-10 bg-orange-600 rounded-full flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity shadow-xl"
+                  >
+                    <i className="fas fa-edit"></i>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -265,6 +295,38 @@ const Home: React.FC<HomeProps> = ({ lang, images, settings }) => {
       </section>
 
       <ContactForm />
+
+      {/* Inline Edit Modal */}
+      {editingImage && (
+        <div className="fixed inset-0 z-[2000] bg-black/80 backdrop-blur-md flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && setEditingImage(null)}>
+          <div className="w-full max-w-lg bg-zinc-900 p-6 rounded-2xl border border-white/10 shadow-2xl">
+            <h3 className="text-xl font-oswald font-black text-white uppercase mb-4">Edit Image URL</h3>
+            <p className="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-4">Field: {editingImage.field}</p>
+            <input
+              autoFocus
+              type="text"
+              value={editingImage.url}
+              onChange={(e) => setEditingImage({ ...editingImage, url: e.target.value })}
+              className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:border-orange-500 outline-none mb-6"
+              placeholder="https://images.unsplash.com/..."
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => setEditingImage(null)}
+                className="flex-1 px-6 py-3 bg-zinc-800 text-white font-bold rounded-xl uppercase text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                className="flex-1 px-6 py-3 bg-orange-600 text-white font-black rounded-xl uppercase text-xs"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
