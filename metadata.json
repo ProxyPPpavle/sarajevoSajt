@@ -1,0 +1,8 @@
+{
+  "name": "The Best Camp Redesign",
+  "description": "A modern, high-performance redesign of thebestcamp.eu featuring a sports camp aesthetic with an integrated CMS for image management, multilingual support, and an AI-powered assistant.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
