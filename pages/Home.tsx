@@ -5,7 +5,6 @@ import { CONTENT } from '../constants';
 import Stats from '../components/Stats';
 import ContactForm from '../components/ContactForm';
 import { useNavigate } from 'react-router-dom';
-import { uploadFile } from '../supabase';
 
 interface HomeProps {
   lang: Language;
@@ -20,29 +19,16 @@ const Home: React.FC<HomeProps> = ({ lang, images, settings, isAdmin, onUpdateSe
   const navigate = useNavigate();
   const [historyPage, setHistoryPage] = useState(0);
   const [isChangingPage, setIsChangingPage] = useState(false);
-  const [editingImage, setEditingImage] = useState<{ field: keyof HomeSettings, url: string, file: File | null } | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const [editingImage, setEditingImage] = useState<{ field: keyof HomeSettings, url: string } | null>(null);
 
   const handleEditClick = (field: keyof HomeSettings, currentUrl: string) => {
-    setEditingImage({ field, url: currentUrl, file: null });
+    setEditingImage({ field, url: currentUrl });
   };
 
-  const handleSaveEdit = async () => {
-    if (!editingImage || !onUpdateSettings) return;
-
-    setIsUploading(true);
-    try {
-      let finalUrl = editingImage.url;
-      if (editingImage.file) {
-        finalUrl = await uploadFile(editingImage.file);
-      }
-      onUpdateSettings({ ...settings, [editingImage.field]: finalUrl });
+  const handleSaveEdit = () => {
+    if (editingImage && onUpdateSettings) {
+      onUpdateSettings({ ...settings, [editingImage.field]: editingImage.url });
       setEditingImage(null);
-    } catch (err) {
-      console.error('Upload failed:', err);
-      alert('Slanje slike nije uspjelo. Provjerite konekciju ili Supabase ključeve.');
-    } finally {
-      setIsUploading(false);
     }
   };
 
@@ -321,60 +307,32 @@ const Home: React.FC<HomeProps> = ({ lang, images, settings, isAdmin, onUpdateSe
           <div className="w-full max-w-lg bg-zinc-900 p-8 rounded-2xl border border-white/10 shadow-2xl animate-in zoom-in duration-300">
             <h3 className="text-2xl font-oswald font-black text-white uppercase mb-6">Izmjena slike</h3>
 
-            {/* File Upload Area */}
-            <div className="mb-6">
-              <label className="block text-[10px] font-black text-zinc-500 uppercase tracking-widest mb-2 ml-1">Izaberi fajl sa računara</label>
-              <div className="relative group/upload">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) setEditingImage({ ...editingImage, file, url: URL.createObjectURL(file) });
-                  }}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                />
-                <div className="w-full h-32 border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center group-hover/upload:border-orange-500/50 transition-colors bg-black/50 overflow-hidden">
-                  {editingImage.url ? (
-                    <img src={editingImage.url} className="w-full h-full object-cover opacity-30" alt="" />
-                  ) : (
-                    <i className="fas fa-cloud-upload-alt text-3xl text-zinc-600 mb-2"></i>
-                  )}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-white font-bold text-xs">Prevuci ili klikni za izbor</span>
-                    <span className="text-zinc-500 text-[8px] uppercase font-black tracking-widest mt-1">Samo slike (PNG, JPG)</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             <div className="relative mb-6">
               <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-zinc-600">
                 <i className="fas fa-link text-[10px]"></i>
               </div>
               <input
+                autoFocus
                 type="text"
                 value={editingImage.url}
-                onChange={(e) => setEditingImage({ ...editingImage, url: e.target.value, file: null })}
+                onChange={(e) => setEditingImage({ ...editingImage, url: e.target.value })}
                 className="w-full bg-black border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white text-xs focus:border-orange-500 outline-none"
-                placeholder="Ili zalijepi URL slike..."
+                placeholder="Zalijepi URL slike (npr. Imgur link)..."
               />
             </div>
 
             <div className="flex gap-3">
               <button
-                disabled={isUploading}
                 onClick={() => setEditingImage(null)}
                 className="flex-1 px-6 py-4 bg-zinc-800 text-white font-bold rounded-xl uppercase text-[10px] hover:bg-zinc-700 transition-colors"
               >
                 Poništi
               </button>
               <button
-                disabled={isUploading}
                 onClick={handleSaveEdit}
                 className="flex-1 px-6 py-4 bg-orange-600 text-white font-black rounded-xl uppercase text-[10px] hover:bg-orange-500 shadow-xl shadow-orange-900/20 active:scale-95 transition-all flex items-center justify-center"
               >
-                {isUploading ? <i className="fas fa-circle-notch fa-spin"></i> : 'Sačuvaj izmjene'}
+                Sačuvaj izmjenuna
               </button>
             </div>
           </div>
