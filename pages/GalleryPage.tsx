@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { GalleryImage, Language } from '../types';
 import { useLocation } from 'react-router-dom';
+import { uploadFile } from '../supabase';
 
 interface GalleryPageProps {
   lang: Language;
@@ -16,14 +17,29 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ images, isAdmin, onAdd, onDel
   const [activeFilter, setActiveFilter] = useState('ALL');
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newImg, setNewImg] = useState({ title: '', url: '', year: '2025', category: 'Training' });
+  const [isUploading, setIsUploading] = useState(false);
+  const [newImg, setNewImg] = useState<{ title: string, url: string, year: string, category: string, file: File | null }>({
+    title: '', url: '', year: '2025', category: 'Training', file: null
+  });
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (onAdd && newImg.url && newImg.title) {
-      onAdd(newImg);
-      setNewImg({ title: '', url: '', year: '2025', category: 'Training' });
-      setShowAddForm(false);
+    if (onAdd && (newImg.url || newImg.file) && newImg.title) {
+      setIsUploading(true);
+      try {
+        let finalUrl = newImg.url;
+        if (newImg.file) {
+          finalUrl = await uploadFile(newImg.file);
+        }
+        onAdd({ ...newImg, url: finalUrl });
+        setNewImg({ title: '', url: '', year: '2025', category: 'Training', file: null });
+        setShowAddForm(false);
+      } catch (err) {
+        console.error('Upload failed:', err);
+        alert('Greška pri slanju slike.');
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
@@ -65,24 +81,46 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ images, isAdmin, onAdd, onDel
                 Dodaj novu sliku
               </button>
             ) : (
-              <form onSubmit={handleAdd} className="w-full max-w-4xl bg-zinc-900 p-6 rounded-2xl border-2 border-orange-500/30 grid grid-cols-1 md:grid-cols-4 gap-4 items-end animate-in fade-in zoom-in duration-300">
+              <form onSubmit={handleAdd} className="w-full max-w-4xl bg-zinc-900 p-8 rounded-2xl border-2 border-orange-500/30 grid grid-cols-1 md:grid-cols-4 gap-6 items-end animate-in fade-in zoom-in duration-300 shadow-2xl">
                 <div className="md:col-span-2">
-                  <label className="text-[10px] font-black text-zinc-500 uppercase mb-1 block">URL Slike</label>
-                  <input required value={newImg.url} onChange={e => setNewImg({ ...newImg, url: e.target.value })} className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-xs outline-none focus:border-orange-500" placeholder="https://..." />
+                  <label className="text-[10px] font-black text-zinc-500 uppercase mb-2 block tracking-widest">Sliku izaberi (File ili URL)</label>
+                  <div className="flex flex-col gap-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={e => {
+                        const file = e.target.files?.[0];
+                        if (file) setNewImg({ ...newImg, file, url: URL.createObjectURL(file) });
+                      }}
+                      className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-[10px] outline-none file:bg-orange-600 file:border-none file:text-white file:font-bold file:px-2 file:rounded file:mr-2"
+                    />
+                    <input
+                      value={newImg.url}
+                      onChange={e => setNewImg({ ...newImg, url: e.target.value, file: null })}
+                      className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-[10px] outline-none focus:border-orange-500"
+                      placeholder="Ili zalijepi link slike..."
+                    />
+                  </div>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-zinc-500 uppercase mb-1 block">Naslov</label>
+                  <label className="text-[10px] font-black text-zinc-500 uppercase mb-2 block tracking-widest">Naslov</label>
                   <input required value={newImg.title} onChange={e => setNewImg({ ...newImg, title: e.target.value })} className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-xs outline-none focus:border-orange-500" placeholder="npr. Kamp 2024" />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-zinc-500 uppercase mb-1 block">Godina</label>
+                  <label className="text-[10px] font-black text-zinc-500 uppercase mb-2 block tracking-widest">Godina</label>
                   <select value={newImg.year} onChange={e => setNewImg({ ...newImg, year: e.target.value })} className="w-full bg-black border border-white/10 rounded-lg px-3 py-2 text-white text-xs outline-none focus:border-orange-500">
                     {['2025', '2024', '2023', '2022', '2021', '2020'].map(y => <option key={y} value={y}>{y}</option>)}
                   </select>
                 </div>
-                <div className="md:col-span-4 flex justify-end gap-2 mt-2">
-                  <button type="button" onClick={() => setShowAddForm(false)} className="px-6 py-2 bg-zinc-800 text-white font-bold rounded-lg uppercase text-[10px]">Poništi</button>
-                  <button type="submit" className="px-6 py-2 bg-orange-600 text-white font-black rounded-lg uppercase text-[10px]">Sačuvaj</button>
+                <div className="md:col-span-4 flex justify-end gap-3 mt-2">
+                  <button type="button" onClick={() => setShowAddForm(false)} className="px-8 py-3 bg-zinc-800 text-white font-bold rounded-xl uppercase text-[10px] hover:bg-zinc-700 transition-colors">Poništi</button>
+                  <button
+                    disabled={isUploading}
+                    type="submit"
+                    className="px-8 py-3 bg-orange-600 text-white font-black rounded-xl uppercase text-[10px] hover:bg-orange-500 shadow-xl shadow-orange-900/20 active:scale-95 transition-all flex items-center justify-center"
+                  >
+                    {isUploading ? <i className="fas fa-circle-notch fa-spin"></i> : 'Sačuvaj u Arhivu'}
+                  </button>
                 </div>
               </form>
             )}
